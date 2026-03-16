@@ -1,0 +1,13 @@
+# Compiled Java classes
+*.class
+
+# macOS junk
+.DS_Store
+
+# Save files created during testing
+*.ms
+
+# IDE folders
+.idea/
+*.iml
+.vscode/
