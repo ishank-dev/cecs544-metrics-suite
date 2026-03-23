@@ -194,8 +194,12 @@ public class MetricsSuiteApp extends JFrame {
                 "No Project", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
+        String tabName = (String) JOptionPane.showInputDialog(
+            this, "Panel Name:", "Enter FP Data",
+            JOptionPane.PLAIN_MESSAGE, null, null, "FP" + (paneCounter + 1));
+        if (tabName == null || tabName.trim().isEmpty()) return;
+        tabName = tabName.trim();
         paneCounter++;
-        String tabName = "FP" + paneCounter;
         FunctionPointPane pane = new FunctionPointPane(tabName, globalLanguage);
         tabbedPane.addTab(tabName, pane);
         tabbedPane.setSelectedIndex(tabbedPane.getTabCount() - 1);

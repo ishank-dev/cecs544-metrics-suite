@@ -1,19 +1,19 @@
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ItemEvent;
 
-// Simple dialog that lets the user pick one language from the list.
+// Lets the user pick one language from the list using checkboxes.
+// Selecting a checkbox automatically deselects all others (single-selection).
 // Pre-selects whatever was chosen last time.
 public class LanguageDialog extends JDialog {
 
-    private final JRadioButton[] radioButtons;
-    private final ButtonGroup    buttonGroup;
+    private final JCheckBox[] checkBoxes;
     private String selectedLanguage;
 
     public LanguageDialog(Frame owner, String currentLanguage) {
-        super(owner, "", true);
+        super(owner, "Select Language", true);
         this.selectedLanguage = currentLanguage;
-        radioButtons = new JRadioButton[Constants.LANGUAGES.length];
-        buttonGroup  = new ButtonGroup();
+        checkBoxes = new JCheckBox[Constants.LANGUAGES.length];
         buildUI(currentLanguage);
         pack();
         setResizable(false);
@@ -32,14 +32,22 @@ public class LanguageDialog extends JDialog {
         root.add(title);
         root.add(Box.createVerticalStrut(8));
 
-        JPanel rbPanel = new JPanel(new GridLayout(Constants.LANGUAGES.length, 1, 0, 2));
+        JPanel cbPanel = new JPanel(new GridLayout(Constants.LANGUAGES.length, 1, 0, 2));
         for (int i = 0; i < Constants.LANGUAGES.length; i++) {
-            radioButtons[i] = new JRadioButton(Constants.LANGUAGES[i]);
-            radioButtons[i].setSelected(Constants.LANGUAGES[i].equals(currentLanguage));
-            buttonGroup.add(radioButtons[i]);
-            rbPanel.add(radioButtons[i]);
+            checkBoxes[i] = new JCheckBox(Constants.LANGUAGES[i]);
+            checkBoxes[i].setSelected(Constants.LANGUAGES[i].equals(currentLanguage));
+            final int idx = i;
+            // Deselect all others when this one is selected (mutually exclusive)
+            checkBoxes[i].addItemListener(e -> {
+                if (e.getStateChange() == ItemEvent.SELECTED) {
+                    for (int j = 0; j < checkBoxes.length; j++) {
+                        if (j != idx) checkBoxes[j].setSelected(false);
+                    }
+                }
+            });
+            cbPanel.add(checkBoxes[i]);
         }
-        root.add(rbPanel);
+        root.add(cbPanel);
         root.add(Box.createVerticalStrut(10));
 
         JButton doneBtn = new JButton("Done");
@@ -52,8 +60,8 @@ public class LanguageDialog extends JDialog {
     }
 
     private void onDone() {
-        for (int i = 0; i < radioButtons.length; i++) {
-            if (radioButtons[i].isSelected()) {
+        for (int i = 0; i < checkBoxes.length; i++) {
+            if (checkBoxes[i].isSelected()) {
                 selectedLanguage = Constants.LANGUAGES[i];
                 dispose();
                 return;

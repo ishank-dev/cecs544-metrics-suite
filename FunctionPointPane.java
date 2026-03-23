@@ -75,7 +75,7 @@ public class FunctionPointPane extends JPanel {
 
             GridBagConstraints gCount = gbc(1, i, GridBagConstraints.WEST);
             gCount.insets = new Insets(5, 4, 5, 8);
-            countFields[i] = new JTextField("0", 6);
+            countFields[i] = new JTextField("", 6);
             countFields[i].setHorizontalAlignment(JTextField.RIGHT);
             // recalculate the row total whenever the user changes the count
             countFields[i].getDocument().addDocumentListener(new DocumentListener() {
@@ -181,6 +181,7 @@ public class FunctionPointPane extends JPanel {
         int totalCount = 0;
         try { totalCount = Integer.parseInt(totalCountField.getText()); }
         catch (NumberFormatException ignored) {}
+        if (totalCount == 0) return;  // no data entered — silently ignore
 
         double fp = totalCount * (0.65 + 0.01 * sumVAF());
 
@@ -223,7 +224,7 @@ public class FunctionPointPane extends JPanel {
             int    locPerFP = Constants.LOC_PER_FP.getOrDefault(currentLanguage, 0);
             NumberFormat nf = NumberFormat.getNumberInstance(Locale.US);
             nf.setMaximumFractionDigits(0);
-            codeSizeField.setText(nf.format(fp * locPerFP));
+            codeSizeField.setText(nf.format((long)fp * locPerFP));
         } catch (NumberFormatException e) {
             JOptionPane.showMessageDialog(this, "Invalid FP value.",
                 "Error", JOptionPane.ERROR_MESSAGE);
@@ -239,10 +240,12 @@ public class FunctionPointPane extends JPanel {
         }
     }
 
-    // Checks that all five count fields are non-negative integers before computing
+    // Checks that all five count fields are non-negative integers before computing.
+    // Empty fields are treated as zero (valid); only non-numeric or negative values error.
     private boolean validateInputs() {
         for (int i = 0; i < 5; i++) {
             String val = countFields[i].getText().trim();
+            if (val.isEmpty()) continue;  // blank == 0, valid
             try {
                 if (Integer.parseInt(val) < 0) { showValidationError(i, val); return false; }
             } catch (NumberFormatException e) {

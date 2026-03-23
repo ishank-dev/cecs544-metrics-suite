@@ -20,14 +20,14 @@ public class Constants {
     static {
         LOC_PER_FP = new LinkedHashMap<>();
         LOC_PER_FP.put("Assembler",    320);
-        LOC_PER_FP.put("Ada 95",        71);
+        LOC_PER_FP.put("Ada 95",       154);
         LOC_PER_FP.put("C",            128);
         LOC_PER_FP.put("C++",           53);
         LOC_PER_FP.put("C#",            54);
         LOC_PER_FP.put("COBOL",         80);
         LOC_PER_FP.put("FORTRAN",      105);
         LOC_PER_FP.put("HTML",          34);
-        LOC_PER_FP.put("Java",          53);
+        LOC_PER_FP.put("Java",          55);
         LOC_PER_FP.put("JavaScript",    47);
         LOC_PER_FP.put("VBScript",      32);
         LOC_PER_FP.put("Visual Basic",  32);

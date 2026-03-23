@@ -52,7 +52,16 @@ public class NewProjectDialog extends JDialog {
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
         JButton okBtn     = new JButton("Ok");
         JButton cancelBtn = new JButton("Cancel");
-        okBtn.addActionListener(e -> { accepted = true; dispose(); });
+        okBtn.addActionListener(e -> {
+            if (projectNameField.getText().trim().isEmpty()) {
+                JOptionPane.showMessageDialog(NewProjectDialog.this,
+                    "Project Name is required.",
+                    "Missing Required Input", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            accepted = true;
+            dispose();
+        });
         cancelBtn.addActionListener(e -> dispose());
         btnRow.add(okBtn);
         btnRow.add(cancelBtn);
