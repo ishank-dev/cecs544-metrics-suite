@@ -3,9 +3,10 @@
 
 cd "$(dirname "$0")"
 echo "Compiling..."
-javac Constants.java FPPaneData.java ProjectData.java \
+javac Constants.java FPPaneData.java UCPPaneData.java ProjectData.java \
       LanguageDialog.java VAFDialog.java NewProjectDialog.java \
-      FunctionPointPane.java MetricsSuiteApp.java
+      TCFDialog.java ECFDialog.java \
+      FunctionPointPane.java UCPPane.java MetricsSuiteApp.java
 
 if [ $? -eq 0 ]; then
     echo "Running..."

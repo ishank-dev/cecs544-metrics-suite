@@ -7,6 +7,9 @@
 # Save files created during testing
 *.ms
 
+# Claude Code guidance file
+CLAUDE.md
+
 # IDE folders
 .idea/
 *.iml

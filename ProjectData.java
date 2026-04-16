@@ -12,7 +12,8 @@ public class ProjectData implements Serializable {
     public String productName = "";
     public String creator     = "";
     public String comments    = "";
-    public List<FPPaneData> panes = new ArrayList<>();
+    public List<FPPaneData>  panes    = new ArrayList<>();
+    public List<UCPPaneData> ucpPanes = new ArrayList<>();
 
     public static ProjectData load(String filename)
             throws IOException, ClassNotFoundException {

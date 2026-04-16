@@ -11,6 +11,7 @@ public class MetricsSuiteApp extends JFrame {
     private String      currentFilePath = null;
     private String      globalLanguage  = null;  // set from Preferences > Language
     private int         paneCounter     = 0;
+    private int         ucpCounter      = 0;
 
     private JTabbedPane tabbedPane;
 
@@ -64,6 +65,9 @@ public class MetricsSuiteApp extends JFrame {
         JMenu fpMenu = new JMenu("Function Points");
         fpMenu.add(menuItem("Enter FP Data", null, e -> onEnterFPData()));
         metricsMenu.add(fpMenu);
+        JMenu ucpMenu = new JMenu("Use Case Points");
+        ucpMenu.add(menuItem("Enter UCP Data", null, e -> onEnterUCPData()));
+        metricsMenu.add(ucpMenu);
         bar.add(metricsMenu);
 
         // Help has nothing for now
@@ -79,6 +83,7 @@ public class MetricsSuiteApp extends JFrame {
 
         tabbedPane.removeAll();
         paneCounter     = 0;
+        ucpCounter      = 0;
         currentFilePath = null;
 
         currentProject = new ProjectData();
@@ -115,6 +120,7 @@ public class MetricsSuiteApp extends JFrame {
     private void loadProject(ProjectData pd, String path) {
         tabbedPane.removeAll();
         paneCounter     = 0;
+        ucpCounter      = 0;
         currentProject  = pd;
         currentFilePath = path;
 
@@ -126,6 +132,16 @@ public class MetricsSuiteApp extends JFrame {
             FunctionPointPane pane = new FunctionPointPane(fpd.tabName, fpd.language);
             pane.loadData(fpd);
             tabbedPane.addTab(fpd.tabName, pane);
+        }
+
+        // ucpPanes may be null when opening a file saved before Iteration 2
+        if (pd.ucpPanes != null) {
+            for (UCPPaneData upd : pd.ucpPanes) {
+                ucpCounter++;
+                UCPPane pane = new UCPPane(upd.tabName);
+                pane.loadData(upd);
+                tabbedPane.addTab(upd.tabName, pane);
+            }
         }
 
         if (tabbedPane.getTabCount() > 0)
@@ -155,9 +171,15 @@ public class MetricsSuiteApp extends JFrame {
 
         // Pull current data from each open tab before saving
         currentProject.panes.clear();
+        if (currentProject.ucpPanes == null)
+            currentProject.ucpPanes = new java.util.ArrayList<>();
+        currentProject.ucpPanes.clear();
         for (int i = 0; i < tabbedPane.getTabCount(); i++) {
-            FunctionPointPane pane = (FunctionPointPane) tabbedPane.getComponentAt(i);
-            currentProject.panes.add(pane.getData());
+            java.awt.Component comp = tabbedPane.getComponentAt(i);
+            if (comp instanceof FunctionPointPane)
+                currentProject.panes.add(((FunctionPointPane) comp).getData());
+            else if (comp instanceof UCPPane)
+                currentProject.ucpPanes.add(((UCPPane) comp).getData());
         }
 
         try {
@@ -184,6 +206,25 @@ public class MetricsSuiteApp extends JFrame {
             FunctionPointPane active = (FunctionPointPane) tabbedPane.getComponentAt(idx);
             active.setLanguage(globalLanguage);
         }
+    }
+
+    // Adds a new UCP tab - won't work unless a project is open first
+    private void onEnterUCPData() {
+        if (currentProject == null) {
+            JOptionPane.showMessageDialog(this,
+                "Please create a new project first (File > New).",
+                "No Project", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        String tabName = (String) JOptionPane.showInputDialog(
+            this, "Panel Name:", "Enter UCP Data",
+            JOptionPane.PLAIN_MESSAGE, null, null, "UCP" + (ucpCounter + 1));
+        if (tabName == null || tabName.trim().isEmpty()) return;
+        tabName = tabName.trim();
+        ucpCounter++;
+        UCPPane pane = new UCPPane(tabName);
+        tabbedPane.addTab(tabName, pane);
+        tabbedPane.setSelectedIndex(tabbedPane.getTabCount() - 1);
     }
 
     // Adds a new FP tab - won't work unless a project is open first
