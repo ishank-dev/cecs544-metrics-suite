@@ -45,23 +45,32 @@ public class UCPPane extends JPanel {
 
     public UCPPane(String tabName) {
         this.tabName = tabName;
-        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        setLayout(new BorderLayout());
         buildUI();
     }
 
     // ── UI Construction ──────────────────────────────────────────────────────
 
     private void buildUI() {
-        add(buildHeader());
-        add(Box.createVerticalStrut(8));
-        add(buildInputGrid());
-        add(Box.createVerticalStrut(10));
-        add(buildComplexitySection());
-        add(Box.createVerticalStrut(8));
-        add(buildParametersSection());
-        add(Box.createVerticalStrut(8));
-        add(buildResultsSection());
+        JPanel content = new JPanel();
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        content.add(buildHeader());
+        content.add(Box.createVerticalStrut(8));
+        content.add(buildInputGrid());
+        content.add(Box.createVerticalStrut(10));
+        content.add(buildComplexitySection());
+        content.add(Box.createVerticalStrut(8));
+        content.add(buildParametersSection());
+        content.add(Box.createVerticalStrut(8));
+        content.add(buildResultsSection());
+
+        JScrollPane scroll = new JScrollPane(content,
+            JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+            JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        scroll.getVerticalScrollBar().setUnitIncrement(16);
+        add(scroll, BorderLayout.CENTER);
     }
 
     private JPanel buildHeader() {
