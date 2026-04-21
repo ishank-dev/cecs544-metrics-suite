@@ -203,8 +203,9 @@ public class MetricsSuiteApp extends JFrame {
 
         int idx = tabbedPane.getSelectedIndex();
         if (idx >= 0) {
-            FunctionPointPane active = (FunctionPointPane) tabbedPane.getComponentAt(idx);
-            active.setLanguage(globalLanguage);
+            java.awt.Component comp = tabbedPane.getComponentAt(idx);
+            if (comp instanceof FunctionPointPane)
+                ((FunctionPointPane) comp).setLanguage(globalLanguage);
         }
     }
 

@@ -259,7 +259,7 @@ public class UCPPane extends JPanel {
 
         prodFactorField = new JTextField("20", 8);
         locPerPMField   = new JTextField("700", 8);
-        locPerUCPField  = new JTextField("100", 8);
+        locPerUCPField  = new JTextField("120", 8);
 
         section.add(paramRow("Productivity Factor (hrs / UCP):", prodFactorField));
         section.add(paramRow("LOC per Person-Month (LOC/PM):",   locPerPMField));

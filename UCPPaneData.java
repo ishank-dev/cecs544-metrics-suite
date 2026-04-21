@@ -23,7 +23,7 @@ public class UCPPaneData implements Serializable {
     // Editable parameters
     public String productivityFactor = "20";
     public String locPerPM           = "700";
-    public String locPerUCP          = "100";
+    public String locPerUCP          = "120";
 
     // Computed result strings (preserved across save/load so they re-display)
     public String ucpResult      = "";
