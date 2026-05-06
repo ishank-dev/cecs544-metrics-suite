@@ -14,6 +14,8 @@ public class ProjectData implements Serializable {
     public String comments    = "";
     public List<FPPaneData>  panes    = new ArrayList<>();
     public List<UCPPaneData> ucpPanes = new ArrayList<>();
+    public SMIPaneData smiPane     = null;   // null until the SMI tab is first created
+    public boolean     smiPaneOpen = false;  // true if the tab was visible when saved
 
     public static ProjectData load(String filename)
             throws IOException, ClassNotFoundException {

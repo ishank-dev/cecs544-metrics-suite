@@ -1,25 +1,36 @@
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.File;
 
 // Main window - sets up the menu bar, split pane, and tabbed area
-// Left pane is left empty for now (used in a later iteration)
 public class MetricsSuiteApp extends JFrame {
 
     private ProjectData currentProject  = null;
     private String      currentFilePath = null;
-    private String      globalLanguage  = null;  // set from Preferences > Language
+    private String      globalLanguage  = null;
     private int         paneCounter     = 0;
     private int         ucpCounter      = 0;
+    private boolean     dirty           = false;
+    private boolean     smiPaneAdded    = false;
 
     private JTabbedPane tabbedPane;
+
+    // Held so they can be enabled/disabled based on project state
+    private JMenuItem fpMenuItem;
+    private JMenuItem ucpMenuItem;
+    private JMenuItem smiMenuItem;
 
     public MetricsSuiteApp() {
         super(Constants.APP_TITLE);
         buildUI();
         buildMenuBar();
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        addWindowListener(new WindowAdapter() {
+            @Override public void windowClosing(WindowEvent e) { onAttemptExit(); }
+        });
         setSize(980, 640);
         setMinimumSize(new Dimension(720, 520));
         setLocationRelativeTo(null);
@@ -31,7 +42,6 @@ public class MetricsSuiteApp extends JFrame {
         split.setDividerSize(5);
         split.setDividerLocation(160);
 
-        // Left side - placeholder, will be used in iteration 2/3
         JPanel leftPanel = new JPanel();
         leftPanel.setBackground(new Color(200, 200, 200));
         leftPanel.setPreferredSize(new Dimension(160, 0));
@@ -51,10 +61,9 @@ public class MetricsSuiteApp extends JFrame {
         fileMenu.add(menuItem("Open", "control O", e -> onFileOpen()));
         fileMenu.add(menuItem("Save", "control S", e -> onFileSave()));
         fileMenu.addSeparator();
-        fileMenu.add(menuItem("Exit", null, e -> System.exit(0)));
+        fileMenu.add(menuItem("Exit", null, e -> onAttemptExit()));
         bar.add(fileMenu);
 
-        // Edit has nothing for now
         bar.add(new JMenu("Edit"));
 
         JMenu prefsMenu = new JMenu("Preferences");
@@ -62,28 +71,43 @@ public class MetricsSuiteApp extends JFrame {
         bar.add(prefsMenu);
 
         JMenu metricsMenu = new JMenu("Metrics");
-        JMenu fpMenu = new JMenu("Function Points");
-        fpMenu.add(menuItem("Enter FP Data", null, e -> onEnterFPData()));
-        metricsMenu.add(fpMenu);
-        JMenu ucpMenu = new JMenu("Use Case Points");
-        ucpMenu.add(menuItem("Enter UCP Data", null, e -> onEnterUCPData()));
-        metricsMenu.add(ucpMenu);
-        bar.add(metricsMenu);
 
-        // Help has nothing for now
+        JMenu fpMenu = new JMenu("Function Points");
+        fpMenuItem = menuItem("Enter FP Data", null, e -> onEnterFPData());
+        fpMenuItem.setEnabled(false);
+        fpMenu.add(fpMenuItem);
+        metricsMenu.add(fpMenu);
+
+        JMenu ucpMenu = new JMenu("Use Case Points");
+        ucpMenuItem = menuItem("Enter UCP Data", null, e -> onEnterUCPData());
+        ucpMenuItem.setEnabled(false);
+        ucpMenu.add(ucpMenuItem);
+        metricsMenu.add(ucpMenu);
+
+        JMenu smiMenu = new JMenu("Software Maturity Index");
+        smiMenuItem = menuItem("Enter SMI Data", null, e -> onEnterSMIData());
+        smiMenuItem.setEnabled(false);
+        smiMenu.add(smiMenuItem);
+        metricsMenu.add(smiMenu);
+
+        bar.add(metricsMenu);
         bar.add(new JMenu("Help"));
 
         setJMenuBar(bar);
     }
 
-    // Creates a new project - clears everything and shows the new project dialog
+    // ── File actions ──────────────────────────────────────────────────────────
+
     private void onFileNew() {
+        if (dirty && !confirmDiscard()) return;
+
         NewProjectDialog dlg = new NewProjectDialog(this);
         if (!dlg.isAccepted()) return;
 
         tabbedPane.removeAll();
         paneCounter     = 0;
         ucpCounter      = 0;
+        smiPaneAdded    = false;
         currentFilePath = null;
 
         currentProject = new ProjectData();
@@ -94,10 +118,13 @@ public class MetricsSuiteApp extends JFrame {
 
         String name = currentProject.projectName.isEmpty() ? "Untitled" : currentProject.projectName;
         setTitle(Constants.APP_TITLE + " - " + name);
+        setProjectMenusEnabled(true);
+        markDirty();
     }
 
-    // Opens a .ms file and rebuilds the tabs from the saved data
     private void onFileOpen() {
+        if (dirty && !confirmDiscard()) return;
+
         JFileChooser fc = new JFileChooser();
         fc.setFileFilter(new FileNameExtensionFilter(
             "Metrics Suite files (*" + Constants.FILE_EXT + ")", "ms"));
@@ -116,13 +143,14 @@ public class MetricsSuiteApp extends JFrame {
         }
     }
 
-    // Rebuilds the whole UI from a loaded ProjectData object
     private void loadProject(ProjectData pd, String path) {
         tabbedPane.removeAll();
         paneCounter     = 0;
         ucpCounter      = 0;
+        smiPaneAdded    = false;
         currentProject  = pd;
         currentFilePath = path;
+        dirty           = false;
 
         String name = pd.projectName.isEmpty() ? "Untitled" : pd.projectName;
         setTitle(Constants.APP_TITLE + " - " + name);
@@ -134,7 +162,6 @@ public class MetricsSuiteApp extends JFrame {
             tabbedPane.addTab(fpd.tabName, pane);
         }
 
-        // ucpPanes may be null when opening a file saved before Iteration 2
         if (pd.ucpPanes != null) {
             for (UCPPaneData upd : pd.ucpPanes) {
                 ucpCounter++;
@@ -144,11 +171,21 @@ public class MetricsSuiteApp extends JFrame {
             }
         }
 
+        // Restore SMI tab if it was open when the project was saved
+        if (pd.smiPane != null && pd.smiPaneOpen) {
+            SMIPane smiPane = new SMIPane(pd.smiPane.tabName);
+            smiPane.loadData(pd.smiPane);
+            tabbedPane.addTab(pd.smiPane.tabName, smiPane);
+            smiPaneAdded = true;
+        }
+
+        setProjectMenusEnabled(true);
+        updateSMIMenuItem();
+
         if (tabbedPane.getTabCount() > 0)
             tabbedPane.setSelectedIndex(tabbedPane.getTabCount() - 1);
     }
 
-    // Saves to the existing file path, or asks for one if this is the first save
     private void onFileSave() {
         if (currentProject == null) {
             JOptionPane.showMessageDialog(this,
@@ -169,21 +206,28 @@ public class MetricsSuiteApp extends JFrame {
             currentFilePath = path;
         }
 
-        // Pull current data from each open tab before saving
         currentProject.panes.clear();
         if (currentProject.ucpPanes == null)
             currentProject.ucpPanes = new java.util.ArrayList<>();
         currentProject.ucpPanes.clear();
+        currentProject.smiPane     = null;
+        currentProject.smiPaneOpen = false;
+
         for (int i = 0; i < tabbedPane.getTabCount(); i++) {
             java.awt.Component comp = tabbedPane.getComponentAt(i);
             if (comp instanceof FunctionPointPane)
                 currentProject.panes.add(((FunctionPointPane) comp).getData());
             else if (comp instanceof UCPPane)
                 currentProject.ucpPanes.add(((UCPPane) comp).getData());
+            else if (comp instanceof SMIPane) {
+                currentProject.smiPane     = ((SMIPane) comp).getData();
+                currentProject.smiPaneOpen = true;
+            }
         }
 
         try {
             currentProject.save(path);
+            dirty = false;
             JOptionPane.showMessageDialog(this, "Project saved successfully.",
                 "Saved", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception ex) {
@@ -193,7 +237,8 @@ public class MetricsSuiteApp extends JFrame {
         }
     }
 
-    // Sets the global language and also updates whichever tab is currently open
+    // ── Preferences ───────────────────────────────────────────────────────────
+
     private void onPrefsLanguage() {
         LanguageDialog dlg = new LanguageDialog(this, globalLanguage);
         String chosen = dlg.getSelectedLanguage();
@@ -209,33 +254,9 @@ public class MetricsSuiteApp extends JFrame {
         }
     }
 
-    // Adds a new UCP tab - won't work unless a project is open first
-    private void onEnterUCPData() {
-        if (currentProject == null) {
-            JOptionPane.showMessageDialog(this,
-                "Please create a new project first (File > New).",
-                "No Project", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-        String tabName = (String) JOptionPane.showInputDialog(
-            this, "Panel Name:", "Enter UCP Data",
-            JOptionPane.PLAIN_MESSAGE, null, null, "UCP" + (ucpCounter + 1));
-        if (tabName == null || tabName.trim().isEmpty()) return;
-        tabName = tabName.trim();
-        ucpCounter++;
-        UCPPane pane = new UCPPane(tabName);
-        tabbedPane.addTab(tabName, pane);
-        tabbedPane.setSelectedIndex(tabbedPane.getTabCount() - 1);
-    }
+    // ── Metrics panel creation ────────────────────────────────────────────────
 
-    // Adds a new FP tab - won't work unless a project is open first
     private void onEnterFPData() {
-        if (currentProject == null) {
-            JOptionPane.showMessageDialog(this,
-                "Please create a new project first (File > New).",
-                "No Project", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
         String tabName = (String) JOptionPane.showInputDialog(
             this, "Panel Name:", "Enter FP Data",
             JOptionPane.PLAIN_MESSAGE, null, null, "FP" + (paneCounter + 1));
@@ -245,9 +266,87 @@ public class MetricsSuiteApp extends JFrame {
         FunctionPointPane pane = new FunctionPointPane(tabName, globalLanguage);
         tabbedPane.addTab(tabName, pane);
         tabbedPane.setSelectedIndex(tabbedPane.getTabCount() - 1);
+        markDirty();
     }
 
-    // Small helper to avoid repeating the same JMenuItem setup code
+    private void onEnterUCPData() {
+        String tabName = (String) JOptionPane.showInputDialog(
+            this, "Panel Name:", "Enter UCP Data",
+            JOptionPane.PLAIN_MESSAGE, null, null, "UCP" + (ucpCounter + 1));
+        if (tabName == null || tabName.trim().isEmpty()) return;
+        tabName = tabName.trim();
+        ucpCounter++;
+        UCPPane pane = new UCPPane(tabName);
+        tabbedPane.addTab(tabName, pane);
+        tabbedPane.setSelectedIndex(tabbedPane.getTabCount() - 1);
+        markDirty();
+    }
+
+    private void onEnterSMIData() {
+        SMIPane pane = new SMIPane("SMI");
+        tabbedPane.addTab("SMI", pane);
+        tabbedPane.setSelectedIndex(tabbedPane.getTabCount() - 1);
+        smiPaneAdded = true;
+        updateSMIMenuItem();
+        markDirty();
+    }
+
+    // ── Quit / close ──────────────────────────────────────────────────────────
+
+    private void onAttemptExit() {
+        if (!dirty) { System.exit(0); return; }
+
+        Object[] options = {"Save", "Discard Changes", "Cancel"};
+        int choice = JOptionPane.showOptionDialog(this,
+            "You have unsaved changes. What would you like to do?",
+            "Unsaved Changes",
+            JOptionPane.YES_NO_CANCEL_OPTION,
+            JOptionPane.WARNING_MESSAGE,
+            null, options, options[0]);
+
+        if (choice == 0) {          // Save
+            onFileSave();
+            if (!dirty) System.exit(0);
+        } else if (choice == 1) {   // Discard
+            System.exit(0);
+        }
+        // choice == 2 (Cancel) or dialog closed → do nothing
+    }
+
+    // Returns true if the user chose to proceed (discard current unsaved work)
+    private boolean confirmDiscard() {
+        Object[] options = {"Save", "Discard Changes", "Cancel"};
+        int choice = JOptionPane.showOptionDialog(this,
+            "You have unsaved changes. What would you like to do?",
+            "Unsaved Changes",
+            JOptionPane.YES_NO_CANCEL_OPTION,
+            JOptionPane.WARNING_MESSAGE,
+            null, options, options[0]);
+
+        if (choice == 0) { onFileSave(); return !dirty; }
+        if (choice == 1) { dirty = false; return true;  }
+        return false;
+    }
+
+    // ── State helpers ─────────────────────────────────────────────────────────
+
+    private void markDirty() { dirty = true; }
+
+    // Enable or disable all metrics panel creation items
+    private void setProjectMenusEnabled(boolean enabled) {
+        fpMenuItem.setEnabled(enabled);
+        ucpMenuItem.setEnabled(enabled);
+        // SMI gets its own rule (only one per project)
+        updateSMIMenuItem();
+    }
+
+    // SMI item is enabled only when a project is open AND no SMI tab exists yet
+    private void updateSMIMenuItem() {
+        smiMenuItem.setEnabled(currentProject != null && !smiPaneAdded);
+    }
+
+    // ── Shared helper ─────────────────────────────────────────────────────────
+
     private JMenuItem menuItem(String text, String accel, java.awt.event.ActionListener al) {
         JMenuItem item = new JMenuItem(text);
         if (accel != null)
