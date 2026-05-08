@@ -109,7 +109,7 @@ public class SMIPane extends JPanel {
                        : (double)(total - (added + changed + deleted)) / total;
 
             model.setValueAt(String.valueOf(total), i, 4);
-            model.setValueAt(String.format("%.4f", smi),  i, 5);
+            model.setValueAt(formatSMI(smi), i, 5);
             prevTotal = total;
         }
     }
@@ -142,6 +142,15 @@ public class SMIPane extends JPanel {
     }
 
     // ── Utility ───────────────────────────────────────────────────────────────
+
+    // Format SMI with up to 8 decimal places, stripping trailing zeros so that
+    // 0.5 shows as "0.5" but 18/19 shows as "0.94736842".
+    private String formatSMI(double smi) {
+        String s = String.format("%.8f", smi);
+        s = s.replaceAll("0+$", "");
+        if (s.endsWith(".")) s += "0";
+        return s;
+    }
 
     private int parseCell(int row, int col) {
         Object val = model.getValueAt(row, col);
